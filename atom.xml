@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[My Octopress Blog]]></title>
+  <link href="http://grayplumage.github.io/atom.xml" rel="self"/>
+  <link href="http://grayplumage.github.io/"/>
+  <updated>2015-12-15T16:14:28+08:00</updated>
+  <id>http://grayplumage.github.io/</id>
+  <author>
+    <name><![CDATA[Your Name]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[My First Blog]]></title>
+    <link href="http://grayplumage.github.io/blog/2015/12/13/my-first-blog/"/>
+    <updated>2015-12-13T14:54:26+08:00</updated>
+    <id>http://grayplumage.github.io/blog/2015/12/13/my-first-blog</id>
+    <content type="html"><![CDATA[<p>This is the test.</p>
+
+<h2>Link test</h2>
+
+<p><a href="https://www.baidu.com/">Baidu</a></p>
+]]></content>
+  </entry>
+  
+</feed>
