@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[The Nest]]></title>
-  <link href="http://grayplumage.github.io/atom.xml" rel="self"/>
+  <title><![CDATA[Category: Sql | The Nest]]></title>
+  <link href="http://grayplumage.github.io/blog/categories/sql/atom.xml" rel="self"/>
   <link href="http://grayplumage.github.io/"/>
   <updated>2015-12-29T20:45:18+08:00</updated>
   <id>http://grayplumage.github.io/</id>
@@ -37,38 +37,6 @@
 <p>看来SQL Server的内部优化策略对我来说还是个谜啊……</p>
 
 <p>果然还有很长的路要走……</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[重构：消除switch]]></title>
-    <link href="http://grayplumage.github.io/blog/2015/12/22/refactor-kill-switch/"/>
-    <updated>2015-12-22T16:23:55+08:00</updated>
-    <id>http://grayplumage.github.io/blog/2015/12/22/refactor-kill-switch</id>
-    <content type="html"><![CDATA[<h2>利用重构</h2>
-
-<p>这几天总结一下之前学习重构过程中比较令我印象深刻的一步。</p>
-
-<p>曾经对面向对象的理解是“像现实世界一样编写程序”，面向过程则是规规矩矩的机器思维的灵活演变。前不久在《重构》里经历前后page穿针走线的几小口啃食后，发现原来面向对象需要have its own fashion.说“面向对象”是一种“思想”，是有其根基的。</p>
-
-<p>而其中比较典型的就是去除switch的过程——</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[博客成立]]></title>
-    <link href="http://grayplumage.github.io/blog/2015/12/13/my-first-blog/"/>
-    <updated>2015-12-13T14:54:26+08:00</updated>
-    <id>http://grayplumage.github.io/blog/2015/12/13/my-first-blog</id>
-    <content type="html"><![CDATA[<h1>博客成立感言</h1>
-
-<p>终于是有了自己的小博客，Octopress是既照顾了我“敲出”自己博客的愿望又不至于搞得太麻烦的心理。</p>
-
-<p>以后会贴出一些平时学习总结出来的一些问题和解决办法吧，顺便是不是还能不务正业的贴点兴趣爱好？谁说这要是纯纯正正的“技术博文”了？毕竟也是刚刚踏上组机道路的……</p>
-
-<p>不过个人习惯，不喜欢写一些乱七八糟的东西凑字数。所以博文大概就是会保持原创，毕竟那些值得转载的东西都让我塞进收藏夹了……不过原创按我现在这水平也许没法保证质量，所以我估计多年以后回首往期博文，它若是经历了“大->小->大”的过程，相比大家也知道期间发生了什么吧XD</p>
-
-<p>毕竟不管怎样——做人，开心最重要！</p>
 ]]></content>
   </entry>
   
