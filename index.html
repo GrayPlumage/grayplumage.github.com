@@ -1,0 +1,259 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>The Nest</title>
+  <meta name="author" content="GrayPlumage">
+
+  
+  <meta name="description" content="表假脱机（TableSpool） 今天聊聊前段时间接触一个小项目时遇到的问题。前段时间完成一个查询用apk后，老师让帮着思考给数据库加索引。由于查询功能使用的核心表采用了软删除，而实时数据采集即存且暂不考虑定期删除=_=，运行一周左右就已包含了6万多的数据量， &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://grayplumage.github.io/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="The Nest" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="/javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">The Nest</a></h1>
+  
+    <h2>It is a good day to live. It is a good day to die.</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="sitesearch" value="grayplumage.github.io">
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div class="blog-index">
+  
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/12/29/sql-tablespool/">SQL：假脱机</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2015-12-29T19:33:18+08:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>29</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>7:33 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h2>表假脱机（TableSpool）</h2>
+
+<p>今天聊聊前段时间接触一个小项目时遇到的问题。前段时间完成一个查询用apk后，老师让帮着思考给数据库加索引。由于查询功能使用的核心表采用了软删除，而实时数据采集即存且暂不考虑定期删除=_=，运行一周左右就已包含了6万多的数据量，所以为查询优化设置合适的索引也就理所应当了。</p>
+
+<p>然后就是重拾大学SQL知识，为聚集索引、非聚集索引而上下求索。由于是业余时间干的外加项目也不急，一晃多少天过去了——那天闲时打开数据库select count(*)， 望着130W+的数据量我想还是花一下午给它规规矩矩加个索引吧。然而试验了一下午，靠谱不靠谱的索引都加了速度还是没有改善……加与不加的差距一度保持在3s以内，而此时打开apk一个简单的查询早已掉速严重。于是一下午得出一个没什么有成就感的结论——查询速度不达标？也许不是索引的锅……</p>
+
+<p>第二天为了荣耀奋斗，虽然我估计写好的apk估计还没找到用户去用，但怎么也不能跟之前当面演示的效果大相径庭……这次学精了，直接定位到使用次数最多的查询语句，执行了一下果然时间不能忍！然后打开执行计划，映入眼帘的是这个东西——表假脱机。</p>
+
+<p>Simply and irresponsibly speaking, 当数据要么需要被再次使用，要么需要与数据源隔离时，需要把这堆数据保存到临时表tempdb来操作。想到查询过程中涉及的一个表不仅数据量庞大且实时更新后我想多半是第二个原因没跑了。然而为什么它就spool了？说到底那个查询用的方法是select <em>， 而我需要用到的查询不过需要其中四五列罢了。究其原因是数据库端的人图省事，一个select </em>的方法作用在视图上，查询后再取其所需。然而这个视图要4个表join、日期排序、按类型取top才能生成的，其中一个表数据量大还实时inserting呢……</p>
+
+<p>于是最终以建议独立写符合需求的select存储过程这一“常识”而终。4个表的主键聚集索引基本完成了所有索引功效（大部分占时0%），最大的time consumer变成了挂着索引的order by。老师称“分析得很到位”，断断续续复习了下索引知识并了解了点spool皮毛——皆大欢喜，皆大欢喜。</p>
+
+<h2>后记</h2>
+
+<p>写这篇文章的时候又连上数据库看了下，数据已达400W+。想着截张图放进博文“真相”一下时，突然发现说好的TableSpool不见了，取而代之的成了索引假脱机，其谓词所在列在表中明明有聚集索引=_=.</p>
+
+<p><img src="https://github.com/GrayPlumage/grayplumage.github.com/raw/master/res/pic/indexspool.png" alt="indexSpool" /></p>
+
+<p>看来SQL Server的内部优化策略对我来说还是个谜啊……</p>
+
+<p>果然还有很长的路要走……</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/12/22/refactor-kill-switch/">重构：消除switch</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2015-12-22T16:23:55+08:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>22</span><span class='date-suffix'>nd</span>, <span class='date-year'>2015</span></span> <span class='time'>4:23 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h2>利用重构</h2>
+
+<p>这几天总结一下之前学习重构过程中比较令我印象深刻的一步。</p>
+
+<p>曾经对面向对象的理解是“像现实世界一样编写程序”，面向过程则是规规矩矩的机器思维的灵活演变。前不久在《重构》里经历前后page穿针走线的几小口啃食后，发现原来面向对象需要have its own fashion.说“面向对象”是一种“思想”，是有其根基的。</p>
+
+<p>而其中比较典型的就是去除switch的过程——</p>
+
+<p>（未完待续，哪天书在手边的。。）</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/12/13/my-first-blog/">博客成立</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2015-12-13T14:54:26+08:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>2:54 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h1>博客成立感言</h1>
+
+<p>终于是有了自己的小博客，Octopress是既照顾了我“敲出”自己博客的愿望又不至于搞得太麻烦的心理。</p>
+
+<p>以后会贴出一些平时学习总结出来的一些问题和解决办法吧，顺便是不是还能不务正业的贴点兴趣爱好？谁说这要是纯纯正正的“技术博文”了？毕竟也是刚刚踏上组机道路的……</p>
+
+<p>不过个人习惯，不喜欢写一些乱七八糟的东西凑字数。所以博文大概就是会保持原创，毕竟那些值得转载的东西都让我塞进收藏夹了……不过原创按我现在这水平也许没法保证质量，所以我估计多年以后回首往期博文，它若是经历了“大->小->大”的过程，相比大家也知道期间发生了什么吧XD</p>
+
+<p><img src="https://github.com/GrayPlumage/grayplumage.github.com/raw/master/res/pic/indexspool.png" alt="Drawing" width="800px" /></p>
+
+<p>毕竟不管怎样——做人，开心最重要！</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  <div class="pagination">
+    
+    <a href="/blog/archives">Blog Archives</a>
+    
+  </div>
+</div>
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2015/12/29/sql-tablespool/">SQL：假脱机</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/12/22/refactor-kill-switch/">重构：消除switch</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/12/13/my-first-blog/">博客成立</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - GrayPlumage -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
