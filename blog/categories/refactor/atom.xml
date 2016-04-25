@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Refactor | The Nest]]></title>
+  <link href="http://grayplumage.github.io/blog/categories/refactor/atom.xml" rel="self"/>
+  <link href="http://grayplumage.github.io/"/>
+  <updated>2016-04-25T16:44:33+08:00</updated>
+  <id>http://grayplumage.github.io/</id>
+  <author>
+    <name><![CDATA[GrayPlumage]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[重构：消除switch]]></title>
+    <link href="http://grayplumage.github.io/blog/2015/12/22/refactor-kill-switch/"/>
+    <updated>2015-12-22T16:23:55+08:00</updated>
+    <id>http://grayplumage.github.io/blog/2015/12/22/refactor-kill-switch</id>
+    <content type="html"><![CDATA[<h2>重构</h2>
+
+<p>这几天总结一下之前学习重构过程中比较令我印象深刻的一步。</p>
+
+<p>曾经对面向对象的理解是“像现实世界一样编写程序”，面向过程则是规规矩矩的机器思维的灵活演变。前不久在《重构》里经历前后page穿针走线的几小口啃食后，发现原来面向对象需要have its own fashion.说“面向对象”是一种“思想”，是有其根基的。</p>
+
+<p>而其中比较典型的就是去除switch的过程——</p>
+
+<p><strong>“面向对象程序的一个最明显的特征是：少用switch（或case）语句”</strong>。归根结底，switch的存在是为了根据判定值的不同给出不同的动作，如果从面向过程语言的最初目的分析，其存在的初衷多数是为了避免过多的if&amp;else语句。然而在面向对象的语言当中，我们往往用不同的对象来封装旗下的动作（function）。因此switch作为“动作指示灯”的一部分作用就显得不合时宜了——既然我们可以将动作（function）封装到各自所属的类中，在程序里使用switch来“引路”，与面向对象的思想大相径庭。</p>
+
+<p><strong>Switch must GO.</strong></p>
+
+<p>《Refactor》给出的是公司职员薪资的例子，并以此基础完成了消除switch的史诗。个人觉得书中的例子举得很清晰明确且贴近现实，建议有机会能够亲自按《Refactor》列举的过程走一遍。这里试着借助盒子和小球来重现重构的过程：</p>
+
+<p>有红色和黄色两种盒子，各有一个按钮；按动红盒的按钮红盒会弹出一个红球，黄色同理。我们的function就是根据自己想要的颜色来按按钮，于是原始的switch实现是这样的：</p>
+
+<pre><code class="java">public void getBall(int color) {
+    switch(color) {
+        case RED:
+            GIVE THE RED BALL;
+            break;
+        case YELLOW:
+            GIVE THE YELLOW BALL;
+            break;
+        ......
+    }
+}
+</code></pre>
+
+<h3>第一步：取代类型码</h3>
+
+<p>“你有一个不可变的类型码，它会影响类的行为——以子类取代这个类型码”
+“你有一个类型码，它会影响类的行为，但你<strong>无法通过继承手法消除它</strong>——以状态对象取代类型码”</p>
+
+<p>什么叫<strong>影响类的行为</strong>？在这里的例子中就是颜色（类型码）会对弹出什么球（行为）有影响。怎么判断<strong>能不能使用继承</strong>呢？这要看现实条件了。在这里的例子中，如果盒子的需要有这样一个功能，比如有一天人们需要再添加一种蓝盒弹蓝球，他们如果需要现有的的盒子具有“一键变身”功能（如让某个红盒一键变蓝盒），那么这时利用继承恐怕就不合适了，因为红&amp;蓝在此时必然是继承自同一父类的2个子类，各自有不同的fuction。我们无法让RedBox类在代码中一下子变成BlueBox类。对应的，如果人们不用这么强大的盒子功能，使用简单的继承就好~</p>
+
+<h4>Replace Type Code With Subclasses</h4>
+
+<p>自然的，父类就是Box，而我们的RedBox,YellowBox继承自它。由于盒子均要实现弹球的动作，我们可以在父类中定义抽象函数，让子类各自实现：</p>
+
+<pre><code class="java">//父类Box
+class Box {
+    static final int RED = 1;
+    static final int YELLOW = 2;
+
+    abstract void getBall();
+    abstract int getType();
+
+    static Box create(int type) {
+        switch (type) {
+            case RED:
+                return new RedBox();
+            case YELLOW:
+                return new YellowBox();
+            default:
+                throw new IllegalArgumentExcption("Incorrect tpye code value");
+        }
+    }
+}
+
+//子类RedBox,YellowBox同
+class RedBox extends Box {
+    public void getBall() {
+        GIVE THE RED BALL;
+    }
+
+    int getType() {
+        return Box.RED;
+    }
+}
+
+class YellowBox extends Box....
+</code></pre>
+
+<p><strong>“这里只有一处用到的switch语句，并且只用于决定创建何种对象，这样的switch语句是可以接受的”。</strong></p>
+
+<h4>Replace Type Code with State/Strategy</h4>
+
+<p>当类型码因为一些原因不能通过继承消除时，我们往往需要考虑通过State/Strategy模式完成取代。</p>
+
+<p><strong>“我们需要声明一个状态类，把它声明为一个抽象类，并提供一个抽象函数，用以返回类型码”</strong>。由于类型码的改变不能借由继承来完成，也就是说我们构造RedBox、YellowBox的判断不能再放在Box当中，这就是我们为什么要新建一个BoxType来实现：</p>
+
+<pre><code class="java">//新建的BoxType类用以存储类型码
+abstract class BoxType {
+    final static int RED = 1;
+    final static int YELLOW = 2;
+
+    abstract int getTypeCode();
+
+    static BoxType newType(int code) {
+        switch(code) {
+        case RED:
+            return new RedBox();
+        case YELLOW:
+            return new YellowBox();
+        default:
+            throw new IllegalArgumentException("Incorrect Box Code");
+        }
+    }
+}
+
+//子类RedBox继承自BoxType，Yellow同
+class RedBox() extends BoxType {
+    int getTypeCode() {
+        return BoxType.RED;
+    }
+}
+
+class YellowBox() extends BoxType...
+
+//Box类，原本类型码int值_type用新建的BoxType类_type替代
+class Box {
+    private BoxType _type;
+
+    void setType(int code) {
+        _type = BoxType.newType(code);
+    }
+
+    //BoxType中的抽象方法，将在被继承的RedBox，YellowBox中被各自实现
+    int getType() {
+       return _type.getTypeCode(); 
+    }
+
+    //根据BoxType中的类型码给出对应的球
+    public void getBall() {
+        switch(getType()) {
+        case BoxType.RED:
+            GIVE THE RED BALL;
+            break;
+        case BoxType.YELLOW:
+            GIVE THE YELLOW BALL;
+            break;
+        default:
+            throw new RuntimeException("Incorrect BoxType");
+        }
+    }
+}
+</code></pre>
+
+<p>什么什么，说是要消除switch结果现在蹦出了两个？！看管别急，因为这一步的主要目的是将类型码从Box中消除（事实上转移到了新建的BoxType类当中），接下来的步骤里将会对switch进行清理。</p>
+
+<h3>第二步：清理条件表达式switch</h3>
+
+<p>“你手上有个条件表达式，它根据对象类型的不同选择不同的行为——将这个条件表达式的每个分支放进一个子类内的复写函数中，然后将原始函数声明为抽象函数”</p>
+
+<p>说的再具体直白一些，那就是将getBall的动作设法交给各自的Box来实现，如此原本保有条件表达式（switch）的父类（BoxType）不再实现具体的动作，能力架空之后自然将其声明为抽象函数“以示职能”，条件表达式也自然而然消失不见。</p>
+
+<p>这一步主要是针对行为选择性的条件表达式进行清理，所以第一步中Replace Type Code With Subclasses里父类中的switch人畜无害，我们自然要对State/Strategy法的历史遗留问题进行开刀：</p>
+
+<pre><code class="java">abstract class BoxType {
+    final static int RED = 1;
+    final static int YELLOW = 2;
+
+    abstract int getTypeCode();
+
+    static BoxType newType(int code) {
+        ......
+    }
+
+    abstract void getBall(Box box);
+}
+
+class RedBox() extends BoxType {
+    int getTypeCode() {
+        return BoxType.RED;
+    }
+
+    void getBall(Box box) {
+        GIVE THE RED BALL;
+    }
+}
+
+class YellowBox() extends BoxType...
+</code></pre>
+
+<p>那么Box类此时还留之何用呢？事实上此时Box原本的职能基本都交给了BoxType，对不同颜色Box的新建工作也基本不需要再经由它（用到RedBox只需要实例化一个RedBox就好）。不过作为所有Box对象的原型，Box类中可以储存一些必要的、各类型盒子都会用到的共同动作——比如GIVE THE BALL，盒子内部的抓球动作也许就是所有盒子都要进行的共同动作。此时我们只要在Box中实现一次，<strong>由于abstract void getBall(Box box)参数中传入了Box，在红盒黄盒实现的过程中我们只要直接调用就OK了。</strong></p>
+
+<pre><code class="java">class Box {
+    private BoxType _type;
+
+    //此时实例化某种Box已经不需要借由Box类，此时setType方法可以去除了
+    //void setType(int code);
+
+    int getType() {
+       return _type.getTypeCode(); 
+    }
+
+    public void grab() {
+        THE ACTION OF GRAB;
+    }
+}
+
+abstract class BoxType {
+    final static int RED = 1;
+    final static int YELLOW = 2;
+
+    abstract int getTypeCode();
+    abstract void getBall(Box box);
+
+    //同理BoxType类里的newType()也可以去除，其下的switch也被清理
+    //static BoxType newType(int code)
+}
+
+class RedBox() extends BoxType {
+    int getTypeCode() {...}
+
+    //GIVE THE RED BALL的具体分步实现
+    void getBall(Box box) {
+        box.grab();
+        box.XXX();
+        .......
+    }
+}
+</code></pre>
+
+<p>至此，Replace Type Code with State/Strategy中的switch便被我们清理完成。</p>
+
+<p>关于原书《重构》中这一过程的实现案例，即Employee例子的代码实现，上传到了 <a href="http://download.csdn.net/detail/u011185952/9501796">http://download.csdn.net/detail/u011185952/9501796</a>  供大家小小对比一下。其实关于重构的学习是一个过程问题，最好的学习方法是从重构前到重构后亲自实现一遍，细细体会个中步骤的目的与结果。</p>
+]]></content>
+  </entry>
+  
+</feed>
