@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[The Nest]]></title>
+  <link href="http://grayplumage.github.io/atom.xml" rel="self"/>
+  <link href="http://grayplumage.github.io/"/>
+  <updated>2015-12-31T16:51:49+08:00</updated>
+  <id>http://grayplumage.github.io/</id>
+  <author>
+    <name><![CDATA[GrayPlumage]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[SQL：假脱机]]></title>
+    <link href="http://grayplumage.github.io/blog/2015/12/29/sql-tablespool/"/>
+    <updated>2015-12-29T19:33:18+08:00</updated>
+    <id>http://grayplumage.github.io/blog/2015/12/29/sql-tablespool</id>
+    <content type="html"><![CDATA[<h2>表假脱机（TableSpool）</h2>
+
+<p>今天聊聊前段时间接触一个小项目时遇到的问题。前段时间完成一个查询用apk后，老师让帮着思考给数据库加索引。由于查询功能使用的核心表采用了软删除，而实时数据采集即存且暂不考虑定期删除=_=，运行一周左右就已包含了6万多的数据量，所以为查询优化设置合适的索引也就理所应当了。</p>
+
+<p>然后就是重拾大学SQL知识，为聚集索引、非聚集索引而上下求索。由于是业余时间干的外加项目也不急，一晃多少天过去了——那天闲时打开数据库select count(*)， 望着130W+的数据量我想还是花一下午给它规规矩矩加个索引吧。然而试验了一下午，靠谱不靠谱的索引都加了速度还是没有改善……加与不加的差距一度保持在3s以内，而此时打开apk一个简单的查询早已掉速严重。于是一下午得出一个没什么有成就感的结论——查询速度不达标？也许不是索引的锅……</p>
+
+<p>第二天为了荣耀奋斗，虽然我估计写好的apk估计还没找到用户去用，但怎么也不能跟之前当面演示的效果大相径庭……这次学精了，直接定位到使用次数最多的查询语句，执行了一下果然时间不能忍！然后打开执行计划，映入眼帘的是这个东西——表假脱机。</p>
+
+<p>Simply and irresponsibly speaking, 当数据要么需要被再次使用，要么需要与数据源隔离时，需要把这堆数据保存到临时表tempdb来操作。想到查询过程中涉及的一个表不仅数据量庞大且实时更新后我想多半是第二个原因没跑了。然而为什么它就spool了？说到底那个查询用的方法是select <em>， 而我需要用到的查询不过需要其中四五列罢了。究其原因是数据库端的人图省事，一个select </em>的方法作用在视图上，查询后再取其所需。然而这个视图要4个表join、日期排序、按类型取top才能生成的，其中一个表数据量大还实时inserting呢……</p>
+
+<p>于是最终以建议独立写符合需求的select存储过程这一“常识”而终。4个表的主键聚集索引基本完成了所有索引功效（大部分占时0%），最大的time consumer变成了挂着索引的order by。老师称“分析得很到位”，断断续续复习了下索引知识并了解了点spool皮毛——皆大欢喜，皆大欢喜。</p>
+
+<h2>后记</h2>
+
+<p>写这篇文章的时候又连上数据库看了下，数据已达400W+。想着截张图放进博文“真相”一下时，突然发现说好的TableSpool不见了，取而代之的成了索引假脱机，其谓词所在列在表中明明有聚集索引=_=.</p>
+
+<p><img src="https://github.com/GrayPlumage/grayplumage.github.com/raw/master/res/pic/indexspool.png" alt="indexSpool" /></p>
+
+<p>看来SQL Server的内部优化策略对我来说还是个谜啊……</p>
+
+<p>果然还有很长的路要走……</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[重构：消除switch]]></title>
+    <link href="http://grayplumage.github.io/blog/2015/12/22/refactor-kill-switch/"/>
+    <updated>2015-12-22T16:23:55+08:00</updated>
+    <id>http://grayplumage.github.io/blog/2015/12/22/refactor-kill-switch</id>
+    <content type="html"><![CDATA[<h2>利用重构</h2>
+
+<p>这几天总结一下之前学习重构过程中比较令我印象深刻的一步。</p>
+
+<p>曾经对面向对象的理解是“像现实世界一样编写程序”，面向过程则是规规矩矩的机器思维的灵活演变。前不久在《重构》里经历前后page穿针走线的几小口啃食后，发现原来面向对象需要have its own fashion.说“面向对象”是一种“思想”，是有其根基的。</p>
+
+<p>而其中比较典型的就是去除switch的过程——</p>
+
+<p>（未完待续，哪天书在手边的。。）</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[博客成立]]></title>
+    <link href="http://grayplumage.github.io/blog/2015/12/13/my-first-blog/"/>
+    <updated>2015-12-13T14:54:26+08:00</updated>
+    <id>http://grayplumage.github.io/blog/2015/12/13/my-first-blog</id>
+    <content type="html"><![CDATA[<h1>博客成立感言</h1>
+
+<p>终于是有了自己的小博客，Octopress是既照顾了我“敲出”自己博客的愿望又不至于搞得太麻烦的心理。</p>
+
+<p>以后会贴出一些平时学习总结出来的一些问题和解决办法吧，顺便是不是还能不务正业的贴点兴趣爱好？谁说这要是纯纯正正的“技术博文”了？毕竟也是刚刚踏上组机道路的……</p>
+
+<p>不过个人习惯，不喜欢写一些乱七八糟的东西凑字数。所以博文大概就是会保持原创，毕竟那些值得转载的东西都让我塞进收藏夹了……不过原创按我现在这水平也许没法保证质量，所以我估计多年以后回首往期博文，它若是经历了“大->小->大”的过程，相比大家也知道期间发生了什么吧XD</p>
+
+<p><img src="https://github.com/GrayPlumage/grayplumage.github.com/raw/master/res/pic/indexspool.png" alt="Drawing" width="800px" /></p>
+
+<p>毕竟不管怎样——做人，开心最重要！</p>
+]]></content>
+  </entry>
+  
+</feed>
